@@ -8,8 +8,8 @@ WORKDIR=$(pwd)
 rm -rf *.tar.gz \
     *.tgz \
     deps \
-    Python-3.14.5 \
-    python-3.14.5-ohos-arm64
+    Python-3.14.6 \
+    python-3.14.6-ohos-arm64
 
 # 下载一些命令行工具，并将它们软链接到 bin 目录中
 cd /opt
@@ -92,13 +92,13 @@ mkdir $WORKDIR/deps
 cd $WORKDIR/deps
 
 # 编译 openssl
-curl -fLO https://github.com/openssl/openssl/releases/download/openssl-3.6.1/openssl-3.6.1.tar.gz
-tar -zxf openssl-3.6.1.tar.gz
-cd openssl-3.6.1
+curl -fLO https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz
+tar -zxf openssl-3.6.4.tar.gz
+cd openssl-3.6.4
 # 修改证书目录和聚合文件路径，让它能在 OpenHarmony 平台上正确地找到证书
 sed -i 's|OPENSSLDIR "/certs"|"/etc/ssl/certs"|' include/internal/common.h
 sed -i 's|OPENSSLDIR "/cert.pem"|"/etc/ssl/certs/cacert.pem"|' include/internal/common.h
-./Configure --prefix=/opt/deps --openssldir=/etc/ssl no-legacy no-module no-engine linux-aarch64
+./Configure --prefix=/opt/deps --openssldir=/etc/ssl linux-aarch64
 make -j$(nproc)
 make install_dev
 cd ..
@@ -186,7 +186,7 @@ cd ncurses-6.5
     --enable-termcap \
     --enable-widec \
     --with-shared \
-    --with-terminfo-dirs=/opt/python-3.14.5-ohos-arm64/share/terminfo:/data/python-3.14.5-ohos-arm64/share/terminfo \
+    --with-terminfo-dirs=/opt/python-3.14.6-ohos-arm64/share/terminfo:/data/python-3.14.6-ohos-arm64/share/terminfo \
     --with-fallbacks=xterm,xterm-256color,xterm-color,screen,screen-256color,tmux,tmux-256color,linux,vt100,vt102,ansi
 make -j$(nproc)
 make install
@@ -229,9 +229,9 @@ cd ..
 cd $WORKDIR
 
 # 编 python 本体
-curl -fLO https://www.python.org/ftp/python/3.14.5/Python-3.14.5.tgz
-tar -zxf Python-3.14.5.tgz
-cd Python-3.14.5
+curl -fLO https://www.python.org/ftp/python/3.14.6/Python-3.14.6.tgz
+tar -zxf Python-3.14.6.tgz
+cd Python-3.14.6
 # 强制走 aarch64-linux-musl 逻辑，让它能复用 musl 的 pip 包
 sed -i 's|PLATFORM_TRIPLET="${PLATFORM_TRIPLET#PLATFORM_TRIPLET=}"|PLATFORM_TRIPLET="aarch64-linux-musl"|g' configure
 sed -i 's|MULTIARCH=$($CC --print-multiarch 2>/dev/null)|MULTIARCH="aarch64-linux-musl"|g' configure
@@ -241,7 +241,7 @@ echo "PLATFORM_TRIPLET=aarch64-linux-musl" > Misc/platform_triplet.c
 ./configure \
     --build=aarch64-linux-musl \
     --host=aarch64-linux-musl \
-    --prefix=/opt/python-3.14.5-ohos-arm64 \
+    --prefix=/opt/python-3.14.6-ohos-arm64 \
     --with-openssl=/opt/deps \
     --disable-ipv6 \
     --with-readline=readline \
@@ -249,24 +249,24 @@ echo "PLATFORM_TRIPLET=aarch64-linux-musl" > Misc/platform_triplet.c
     LDFLAGS="-L/opt/deps/lib -Wl,-rpath,'\$\$ORIGIN/../lib' -Wl,-rpath,'\$\$ORIGIN/../../../lib'"
 make -j$(nproc)
 make install
-cp /opt/deps/lib/*so* /opt/python-3.14.5-ohos-arm64/lib
+cp /opt/deps/lib/*so* /opt/python-3.14.6-ohos-arm64/lib
 cd ..
 
 # 对这几个脚本做一点小改造，让它们能够做到 “portable”，在任意安装路径下都能正常使用。
-cd /opt/python-3.14.5-ohos-arm64/bin
+cd /opt/python-3.14.6-ohos-arm64/bin
 printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")"/python3.14 -m pip "$@"\n' > pip3
 printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")"/python3.14 -m pip "$@"\n' > pip3.14
 printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")"/python3.14 -m pydoc "$@"\n' > pydoc3.14
 cd - >/dev/null
 
 # 这个 python 不支持图形界面，idle 无法正常使用，直接删掉 idle 命令
-rm /opt/python-3.14.5-ohos-arm64/bin/idle*
+rm /opt/python-3.14.6-ohos-arm64/bin/idle*
 
 # 将 terminfo 数据库携带到制品中
-cp -r /opt/deps/share/terminfo /opt/python-3.14.5-ohos-arm64/share/
+cp -r /opt/deps/share/terminfo /opt/python-3.14.6-ohos-arm64/share/
 
 # 进行代码签名
-cd /opt/python-3.14.5-ohos-arm64
+cd /opt/python-3.14.6-ohos-arm64
 find . -type f \( -perm -0111 -o -name "*.so*" \) | while read FILE; do
     if file -b "$FILE" | grep -iqE "elf|sharedlib|ELF|shared object"; then
         echo "Signing binary file $FILE"
@@ -278,21 +278,21 @@ done
 cd $WORKDIR
 
 # 履行开源义务，把使用的开源软件的 license 全部聚合起来放到制品中
-cat <<EOF > /opt/python-3.14.5-ohos-arm64/licenses.txt
+cat <<EOF > /opt/python-3.14.6-ohos-arm64/licenses.txt
 This document describes the licenses of all software distributed with the
 bundled application.
 ==========================================================================
 
 python
 =============
-$(cat Python-3.14.5/LICENSE)
+$(cat Python-3.14.6/LICENSE)
 
 openssl
 =============
 ==license==
-$(cat deps/openssl-3.6.1/LICENSE.txt)
+$(cat deps/openssl-3.6.4/LICENSE.txt)
 ==authors==
-$(cat deps/openssl-3.6.1/AUTHORS.md)
+$(cat deps/openssl-3.6.4/AUTHORS.md)
 
 zlib
 =============
@@ -357,8 +357,8 @@ $(sed -n '1,10p' deps/sqlite-autoconf-3510200/sqlite3.h)
 EOF
 
 # 打包最终产物
-cp -r /opt/python-3.14.5-ohos-arm64 ./
-tar -zcf python-3.14.5-ohos-arm64.tar.gz python-3.14.5-ohos-arm64
+cp -r /opt/python-3.14.6-ohos-arm64 ./
+tar -zcf python-3.14.6-ohos-arm64.tar.gz python-3.14.6-ohos-arm64
 
 # 这一步是针对手动构建场景做优化。
 # 在 docker run --rm -it 的用法下，有可能文件还没落盘，容器就已经退出并被删除，从而导致压缩文件损坏。
