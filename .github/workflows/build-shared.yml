@@ -10,10 +10,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Add --enable-shared to configure
+      - name: Patch build.sh - skip OHOS ARM64 tools, use system tools
         run: |
+          # 跳过下载 OHOS ARM64 工具（在 x86_64 上无法执行）
+          sed -i '/Harmonybrew\/ohos-coreutils/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-unzip/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-grep/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-gawk/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-make/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-tar/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-gzip/s/^/#SKIP: /' build.sh
+          sed -i '/Harmonybrew\/ohos-perl/s/^/#SKIP: /' build.sh
+
+          # 跳过 ln -sf 到 /bin 的链接（用系统自带工具）
+          sed -i '/ln -sf.*\/bin\//s/^/#SKIP: /' build.sh
+
+          # 添加 --enable-shared 到 configure
           sed -i '/\.\/configure/s/$/ --enable-shared/' build.sh
-          grep -n "configure" build.sh
+
+          # 验证修改
+          echo "=== Skipped lines ==="
+          grep -c "SKIP:" build.sh
+          echo "=== Configure line ==="
+          grep "configure" build.sh | grep -v SKIP
 
       - name: Build
         run: sudo bash build.sh
