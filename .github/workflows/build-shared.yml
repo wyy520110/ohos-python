@@ -1,0 +1,29 @@
+name: Build Python with Shared Library
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add --enable-shared to configure
+        run: |
+          sed -i '/\.\/configure/s/$/ --enable-shared/' build.sh
+          grep -n "configure" build.sh
+
+      - name: Build
+        run: bash build.sh
+
+      - name: Check output
+        run: |
+          find python-3.14.6-ohos-arm64 -name "python3" -o -name "libpython*.so*" | head -10
+          ls -la python-3.14.6-ohos-arm64/bin/ 2>/dev/null || echo "No bin"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-ohos-shared
+          path: python-3.14.6-ohos-arm64.tar.gz
